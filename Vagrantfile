@@ -15,22 +15,22 @@ Vagrant.configure("2") do |config|
     sudo apt-get install -y ntp
     # Install necessary packages for containerd
     sudo apt-get install -y ca-certificates curl gnupg2 lsb-release apt-transport-https 
-	  # add containerd's official GPG key
-	  sudo mkdir -p /etc/apt/keyrings
-	  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-	  #setup Containerd repository
-	  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list 
+    # add containerd's official GPG key
+    sudo mkdir -p /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    #setup Containerd repository
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list 
     # Install Containerd 
-	  sudo apt-get update
-	  sudo apt-get install -y containerd.io
+    sudo apt-get update
+    sudo apt-get install -y containerd.io
 	
     # Install Kubernetes
     export KUBE_VERSION="1.24.10"
-  	sudo curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
-	  echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    sudo curl -fsSLo /etc/apt/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
     sudo apt-get update
     sudo apt-get install -y kubeadm=${KUBE_VERSION}-00 kubelet=${KUBE_VERSION}-00 kubectl=${KUBE_VERSION}-00 
-	  sudo apt-mark hold kubelet kubeadm kubectl 
+    sudo apt-mark hold kubelet kubeadm kubectl 
     
     # Disable swap
     sudo swapoff -a && sudo sysctl -w vm.swappiness=0
@@ -50,7 +50,7 @@ Vagrant.configure("2") do |config|
       
     sudo sysctl --system
     
-	  # Configure containerd settings
+    # Configure containerd settings
     echo "overlay" | sudo tee /etc/modules-load.d/containerd.conf
     echo "br_netfilter" | sudo tee -- append /etc/modules-load.d/containerd.conf
 
@@ -62,25 +62,30 @@ Vagrant.configure("2") do |config|
     sudo systemctl restart containerd
     sudo systemctl enable containerd
 	
-	  # Install and configure crictl
+    # Install and configure crictl
     export VER="v1.24.0"
     wget https://github.com/kubernetes-sigs/cri-tools/releases/download/$VER/crictl-$VER-linux-amd64.tar.gz
     tar zxvf crictl-$VER-linux-amd64.tar.gz
     sudo mv crictl /usr/local/bin
 	
-	  # Set the endpoints to avoid the deprecation error
+    # Set the endpoints to avoid the deprecation error
     sudo crictl config --set runtime-endpoint=unix:///run/containerd/containerd.sock --set image-endpoint=unix:///run/containerd/containerd.sock
 	
-	  # Add Helm tool
+    # Add Helm tool
     wget https://get.helm.sh/helm-v3.9.0-linux-amd64.tar.gz
     tar -xf helm-v3.9.0-linux-amd64.tar.gz
     sudo cp linux-amd64/helm /usr/local/bin/
-
+    
+    # Add bash alias for K8s
+    echo "source <(kubectl completion bash)" >> ~/.bashrc
+    echo "alias k=kubectl"
+    echo "complete -o default -F __start_kubectl k"
+     
     #sudo kubeadm init --kubernetes-version v${KUBE_VERSION} --apiserver-advertise-address=172.17.8.101 --pod-network-cidr=10.244.0.0/16
     #mkdir -p $HOME/.kube
     #sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
     #sudo chown $(id -u):$(id -g) $HOME/.kube/config
-    
+      
     # Use Calico as the network plugin
     #kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
     
